@@ -1,0 +1,62 @@
+services:
+  nestjs-api-sample-node:
+    container_name: nestjs-api-sample-node__container
+    image: node:latest
+    volumes:
+      - type: bind
+        source: "./project"
+        target: "/app"
+    working_dir: /app
+    ports:
+      - "${API_PORT:-8000}:${API_PORT:-8000}"
+    tty: true
+    env_file:
+      - ".env"
+    networks:
+      - network__frontend
+      - network__backend
+    depends_on:
+      - nestjs-api-sample-database
+
+  nestjs-api-sample-database:
+    container_name: ${DATABASE_HOST:-nestjs-api-sample-database__container}
+    image: mysql:latest
+    platform: linux/x86_64
+    command: --default-authentication-plugin=mysql_native_password
+    volumes:
+      - type: bind
+        source: "./docker/mysql/local/data"
+        target: "/var/lib/mysql"
+    ports:
+      - "${DATABASE_PORT:-3306}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: "${DATABASE_ROOT_PASSWORD:-root}"
+      MYSQL_DATABASE: "${DATABASE_DATABASE:-nestjs_api_sample}"
+      MYSQL_USER: "${DATABASE_USER:-nestjs_api_sample}"
+      MYSQL_PASSWORD: "${DATABASE_PASSWORD:-nestjs_api_sample}"
+    networks:
+      - network__backend
+
+  nestjs-api-sample-mail:
+    container_name: ${MAIL_HOST}
+    image: axllent/mailpit
+    restart: unless-stopped
+    ports:
+      - "${MAIL_PORT}:1025"
+      - "8025:8025"
+    environment:
+      MP_MAX_MESSAGES: 1000
+      MP_DATA_FILE: "/data/mailpit.db"
+      MP_SMTP_AUTH: "${MAIL_USER}:${MAIL_PASSWORD}"
+      MP_SMTP_AUTH_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    volumes:
+      - type: bind
+        source: "./docker/mail/local/data"
+        target: "/data"
+    networks:
+      - network__backend
+
+networks:
+  network__frontend:
+  network__backend:
